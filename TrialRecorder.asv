@@ -1,0 +1,71 @@
+% Author: Sam Boyer
+% Gmail: sam.james.boyer@gmail.com 
+%
+% This is a simple script that looks for the redis stream RECORDERFLAG
+% and lo
+
+% Connect to Redis using Python from MATLAB
+pyenv('Version', 'C:\Users\ReHAB-CNRA\anaconda3\envs\redis_test\python.exe');
+redis = py.importlib.import_module('redis');
+r = redis.Redis(pyargs('host', '192.168.7.15', 'port', 6379));
+%set up the cerebus sdk
+sdkPath = 'C:\Program Files\Blackrock Microsystems\Cerebus Central Suite 7.6.1';
+addpath(sdkPath);
+
+% Check if the connection is successful (ping the server)
+if r.ping()
+    disp('Connected to Redis server');
+else
+    error('Could not connect to Redis server');
+end
+
+function result = PyToMat(pyList)
+    tuple = pyList{1};
+    dict = tuple{2}; 
+    result = dict{py.bytes('FLAG')};
+end 
+
+%open instance of the cbsdk
+cbmex('open');
+
+%forever monitor the redis server  
+is_recording = false; 
+while true
+    pause(0.1);
+    values = r.xrange("RECORDERFLAG", "-", "+"); %needs to only read the first value 
+    %check if the response is empty 
+    if isempty(values)
+        continue;
+    end
+    
+    flag = PyToMat(values);
+    if isempty(values)
+        continue;
+    end 
+    if flag == "record"
+
+        if is_recording == true
+            continue;
+        else
+            cbmex('fileconfig', 'Desktop', 'buh buh BUH!', 1);
+        end
+    elseif flag == "stop"
+        if is_recording == false
+            continue; 
+        else
+            cbmex('fileconfig', 'Desktop', '', 0);
+        end 
+    end
+end 
+
+
+
+%tic
+% Define the stream name and a test value
+%streamName = 'mystream';
+%test_data = int16(zeros(1,307200));
+%binary = typecast(test_data, 'uint8');
+%testValue = py.dict(pyargs('field1',py.bytes(binary), 'field2', 'value2'));
+%streamId = r.xadd(streamName, testValue);
+
+%toc * 1000
