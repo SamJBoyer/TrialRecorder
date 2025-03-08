@@ -10,11 +10,11 @@
 % Connect to Redis using Python from MATLAB
 clearvars; 
 clc; 
-pyenv('Version', 'C:\Users\ReHAB-CNRA\anaconda3\envs\redis_test\python.exe');
+pyenv('Version', 'C:\Users\ReHAB-Dev\anaconda3\envs\HQ\python.exe');
 redis = py.importlib.import_module('redis');
-r = redis.Redis(pyargs('host', '192.168.7.15', 'port', 6379, 'decode_responses', true));
+r = redis.Redis(pyargs('host', '172.23.201.226', 'port', 6379, 'password', 'oogert', 'decode_responses', true));
 %set up the cerebus sdk
-sdkPath = 'C:\Program Files\Blackrock Microsystems\Cerebus Central Suite 7.6.1';
+sdkPath = 'C:\Program Files\Blackrock Microsystems\Cerebus Central Suite';
 addpath(sdkPath);
 
 % Check if the connection is successful (ping the server)
@@ -33,14 +33,21 @@ end
 
 %open instance of the cbsdk
 cbmex('open');
+cbmex('system', 'reset')
+
+save_path = 'C:\Users\ReHAB-Dev\Desktop\TrialRecorderDump\data';
+cbmex('trialconfig', 1)
 
 %monitor the redis server  
 is_recording = false; 
 while true
     pause(0.1);
-    values = r.xrange("RECORDERFLAG", "-", "+"); %needs to only read the first value 
+    % testing reset [a, b, c] = cbmex('trialdata', 1)
+    % testing reset t = cbmex('time', 'samples')
+    values = r.xrevrange("RECORDERFLAG", "+", "-", py.int(1));  % Correct count argument as an integer
     %check if the response is empty 
     if isempty(values)
+        disp('no value')
         continue;
     end
     
@@ -51,15 +58,21 @@ while true
     if flag == "START"
 
         if is_recording == true
+            disp('recording ongoing')
             continue;
         else
-            cbmex('fileconfig', 'Desktop', 'buh buh BUH!', 1);
+            disp('starting file recording')
+            cbmex('fileconfig', save_path, 'buh buh BUH!', 1);
+            is_recording = true;
         end
     elseif flag == "STOP"
         if is_recording == false
+            disp('recording halted')
             continue; 
         else
-            cbmex('fileconfig', 'Desktop', '', 0);
+            disp('stopping file recording')
+            cbmex('fileconfig', save_path, '', 0);
+            is_recording = false; 
         end 
     end
 end 
